@@ -1,96 +1,97 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, Image, FlatList, TouchableOpacity, SafeAreaView, TextInput, Dimensions, StatusBar } from 'react-native';
+import { StyleSheet, Text, View, FlatList, TextInput, TouchableOpacity, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
+import { useFonts, Fredoka_700Bold } from '@expo-google-fonts/fredoka';
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore';
 
-const screenWidth = Dimensions.get('window').width;
+// Tu configuración de Firebase vinculada a CSC
+const firebaseConfig = {
+  apiKey: "AIzaSyDXkH65rdHX-OV506KOOwzmStow9daIyM",
+  authDomain: "instagram-clone-d2647.firebaseapp.com",
+  projectId: "instagram-clone-d2647",
+  storageBucket: "instagram-clone-d2647.firebasestorage.app",
+  messagingSenderId: "292841865361",
+  appId: "1:292841865361:web:c9136b1b50ffcb9d38bf30"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 export default function App() {
-  const [view, setView] = useState('feed');
-  const [posts, setPosts] = useState([
-    { id: '1', user: 'User_Alpha', image: 'https://picsum.photos/800/800?random=1', caption: 'Vibras nocturnas 🌃' },
-    { id: '2', user: 'Cyber_Dev', image: 'https://picsum.photos/800/800?random=2', caption: 'Programando en fucsia' },
-  ]);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
+  let [fontsLoaded] = useFonts({ Fredoka_700Bold });
+
+  // Escuchar mensajes en tiempo real
+  useEffect(() => {
+    const q = query(collection(db, 'chats'), orderBy('createdAt', 'asc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return unsubscribe;
+  }, []);
+
+  const sendMessage = async () => {
+    if (newMessage.trim() === '') return;
+    try {
+      await addDoc(collection(db, 'chats'), {
+        text: newMessage,
+        user: 'Yo', // Aquí después pondremos el nombre del usuario logueado
+        createdAt: serverTimestamp()
+      });
+      setNewMessage('');
+    } catch (e) {
+      console.error("Error al enviar:", e);
+    }
+  };
+
+  if (!fontsLoaded) return null;
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
-      
-      {/* Header Estilo Premium */}
       <View style={styles.header}>
-        <Text style={styles.logo}>INSTACLOUD</Text>
-        <TouchableOpacity style={styles.iconCircle}>
-          <Text style={{color: '#ff00ff', fontSize: 18}}>⚡</Text>
-        </TouchableOpacity>
+        <Text style={styles.logo}>CSC MESSENGER</Text>
       </View>
 
       <FlatList
-        data={posts}
+        data={messages}
         keyExtractor={item => item.id}
         renderItem={({ item }) => (
-          <View style={styles.postCard}>
-            <View style={styles.postHeader}>
-              <View style={styles.avatarGradient} />
-              <Text style={styles.username}>{item.user}</Text>
-            </View>
-            <Image source={{ uri: item.image }} style={styles.postImage} />
-            <View style={styles.postFooter}>
-              <View style={{flexDirection: 'row', marginBottom: 5}}>
-                <Text style={styles.fucsiaIcon}>💗</Text>
-                <Text style={styles.fucsiaIcon}>💬</Text>
-                <Text style={styles.fucsiaIcon}>✈️</Text>
-              </View>
-              <Text style={styles.caption}><Text style={{fontWeight: 'bold'}}>{item.user}</Text> {item.caption}</Text>
-            </View>
+          <View style={[styles.bubble, item.user === 'Yo' ? styles.myBubble : styles.otherBubble]}>
+            <Text style={styles.msgText}>{item.text}</Text>
           </View>
         )}
+        contentContainerStyle={{ padding: 20 }}
       />
 
-      {/* Nav Bar Fucsia */}
-      <View style={styles.navBar}>
-        <TouchableOpacity onPress={() => setView('feed')}><Text style={styles.navIcon}>🏠</Text></TouchableOpacity>
-        <TouchableOpacity style={styles.plusBtn}><Text style={styles.plusText}>+</Text></TouchableOpacity>
-        <TouchableOpacity onPress={() => setView('profile')}><Text style={styles.navIcon}>👤</Text></TouchableOpacity>
-      </View>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <View style={styles.inputContainer}>
+          <TextInput 
+            style={styles.input} 
+            placeholder="Escribe un mensaje chicle..." 
+            placeholderTextColor="#666"
+            value={newMessage}
+            onChangeText={setNewMessage}
+          />
+          <TouchableOpacity style={styles.sendBtn} onPress={sendMessage}>
+            <Text style={styles.sendText}>⚡</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#121212' }, // Negro Mate
-  header: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    padding: 20, 
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#252525'
-  },
-  logo: { fontSize: 24, fontWeight: '900', color: '#ff00ff', letterSpacing: 2 },
-  iconCircle: { width: 35, height: 35, borderRadius: 17.5, backgroundColor: '#1f1f1f', justifyContent: 'center', alignItems: 'center' },
-  postCard: { marginBottom: 15 },
-  postHeader: { flexDirection: 'row', alignItems: 'center', padding: 12 },
-  avatarGradient: { width: 35, height: 35, borderRadius: 17.5, backgroundColor: '#ff00ff', marginRight: 10 },
-  username: { color: '#fff', fontWeight: '600' },
-  postImage: { width: screenWidth, height: screenWidth, backgroundColor: '#1f1f1f' },
-  postFooter: { padding: 12 },
-  fucsiaIcon: { color: '#ff00ff', fontSize: 22, marginRight: 15 },
-  caption: { color: '#fff', fontSize: 14 },
-  navBar: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-around', 
-    paddingVertical: 15, 
-    backgroundColor: '#000', 
-    borderTopWidth: 1, 
-    borderTopColor: '#252525',
-    alignItems: 'center'
-  },
-  navIcon: { fontSize: 24, color: '#fff' },
-  plusBtn: { 
-    backgroundColor: '#ff00ff', 
-    width: 50, 
-    height: 35, 
-    borderRadius: 10, 
-    justifyContent: 'center', 
-    alignItems: 'center' 
-  },
-  plusText: { color: '#000', fontSize: 24, fontWeight: 'bold' }
+  container: { flex: 1, backgroundColor: '#121212' },
+  header: { padding: 20, backgroundColor: '#000', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#ff00ff22' },
+  logo: { fontFamily: 'Fredoka_700Bold', fontSize: 26, color: '#ff00ff', textShadowColor: '#ff00ff', textShadowRadius: 10 },
+  bubble: { padding: 15, borderRadius: 25, marginBottom: 12, maxWidth: '85%' },
+  myBubble: { alignSelf: 'flex-end', backgroundColor: '#ff00ff', borderBottomRightRadius: 5 },
+  otherBubble: { alignSelf: 'flex-start', backgroundColor: '#252525', borderBottomLeftRadius: 5 },
+  msgText: { color: '#fff', fontFamily: 'Fredoka_700Bold', fontSize: 15 },
+  inputContainer: { flexDirection: 'row', padding: 20, backgroundColor: '#000', alignItems: 'center' },
+  input: { flex: 1, backgroundColor: '#1a1a1a', color: '#fff', borderRadius: 30, paddingHorizontal: 20, height: 50, fontFamily: 'Fredoka_700Bold' },
+  sendBtn: { marginLeft: 12, backgroundColor: '#ff00ff', width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center' },
+  sendText: { fontSize: 22, color: '#000' }
 });
