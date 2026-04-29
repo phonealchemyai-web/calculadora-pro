@@ -1,48 +1,72 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, Image, FlatList, TouchableOpacity, SafeAreaView, Modal } from 'react-native';
 import { Camera } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function App() {
   const [hasPermission, setHasPermission] = useState(null);
   const [cameraVisible, setCameraVisible] = useState(false);
   const [posts, setPosts] = useState([
-    { id: '1', user: 'tu_usuario', image: 'https://picsum.photos/id/10/500/500', likes: 0, caption: '¡Mi primer post!', liked: false }
+    { id: '1', user: 'tu_usuario', image: 'https://picsum.photos/id/10/500/500', likes: 12, caption: '¡Mi primer post!', liked: false }
   ]);
   const cameraRef = useRef(null);
 
   useEffect(() => {
     (async () => {
       const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === 'granted');
+      const galleryStatus = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      setHasPermission(status === 'granted' && galleryStatus.status === 'granted');
     })();
   }, []);
+
+  const addPost = (uri, caption) => {
+    const newPost = {
+      id: Date.now().toString(),
+      user: 'yo_programador',
+      image: uri,
+      likes: 0,
+      caption: caption,
+      liked: false
+    };
+    setPosts([newPost, ...posts]);
+  };
+
+  const pickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      addPost(result.assets[0].uri, 'Elegida desde la galería 🖼️');
+    }
+  };
 
   const takePicture = async () => {
     if (cameraRef.current) {
       const photo = await cameraRef.current.takePictureAsync();
-      const newPost = {
-        id: Date.now().toString(),
-        user: 'yo_programador',
-        image: photo.uri,
-        likes: 0,
-        caption: 'Nueva foto desde mi App! 📸',
-        liked: false
-      };
-      setPosts([newPost, ...posts]);
+      addPost(photo.uri, 'Nueva foto desde la cámara! 📸');
       setCameraVisible(false);
     }
   };
 
   if (hasPermission === null) return <View />;
-  if (hasPermission === false) return <Text>No hay acceso a la cámara</Text>;
+  if (hasPermission === false) return <Text>No hay acceso a la cámara o galería</Text>;
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.logo}>Instagram Pro</Text>
-        <TouchableOpacity onPress={() => setCameraVisible(true)}>
-          <Text style={styles.headerIcon}>📷</Text>
-        </TouchableOpacity>
+        <View style={styles.headerIcons}>
+          <TouchableOpacity onPress={pickImage} style={{marginRight: 15}}>
+            <Text style={styles.iconText}>🖼️</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setCameraVisible(true)}>
+            <Text style={styles.iconText}>📷</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <FlatList
@@ -52,7 +76,7 @@ export default function App() {
           <View style={styles.post}>
             <View style={styles.postHeader}><View style={styles.avatar} /><Text style={styles.username}>{item.user}</Text></View>
             <Image source={{ uri: item.image }} style={styles.postImage} />
-            <Text style={styles.caption}>{item.caption}</Text>
+            <Text style={styles.caption}><Text style={styles.username}>{item.user}</Text> {item.caption}</Text>
           </View>
         )}
       />
@@ -75,9 +99,10 @@ export default function App() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', padding: 15, borderBottomWidth: 0.5 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', padding: 15, alignItems: 'center', borderBottomWidth: 0.5, borderBottomColor: '#dbdbdb' },
+  headerIcons: { flexDirection: 'row' },
+  iconText: { fontSize: 26 },
   logo: { fontSize: 24, fontWeight: 'bold' },
-  headerIcon: { fontSize: 28 },
   post: { marginBottom: 20 },
   postHeader: { flexDirection: 'row', padding: 10, alignItems: 'center' },
   avatar: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#eee', marginRight: 10 },
