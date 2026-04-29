@@ -1,129 +1,78 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Dimensions } from 'react-native';
+import { StyleSheet, Text, View, Image, FlatList, TouchableOpacity, SafeAreaView } from 'react-native';
 
-const { width } = Dimensions.get('window');
-const BUTTON_WIDTH = width / 4;
+const DATA = [
+  { id: '1', user: 'coding_wizard', image: 'https://picsum.photos/id/10/500/500', likes: 124, caption: 'Mi primera app con GitHub y Expo! 🚀' },
+  { id: '2', user: 'phone_alchemy', image: 'https://picsum.photos/id/20/500/500', likes: 89, caption: 'Programando desde el móvil. #DevLife' },
+  { id: '3', user: 'react_native_fan', image: 'https://picsum.photos/id/30/500/500', likes: 256, caption: 'Aprendiendo a manejar listas. 📱' },
+];
+
+const STORY_DATA = ['Tu historia', 'juan_dev', 'maria.ai', 'tech_guru', 'pixel_art'];
 
 export default function App() {
-  const [display, setDisplay] = useState('0');
-  const [prevValue, setPrevValue] = useState(null);
-  const [operator, setOperator] = useState(null);
-
-  const handleTap = (type, value) => {
-    if (type === 'number') {
-      setDisplay(display === '0' ? String(value) : display + value);
-    }
-    if (type === 'clear') {
-      setDisplay('0');
-      setPrevValue(null);
-      setOperator(null);
-    }
-    if (type === 'posneg') {
-      setDisplay(String(parseFloat(display) * -1));
-    }
-    if (type === 'percentage') {
-      setDisplay(String(parseFloat(display) * 0.01));
-    }
-    if (type === 'operator') {
-      setOperator(value);
-      setPrevValue(display);
-      setDisplay('0');
-    }
-    if (type === 'equal') {
-      const current = parseFloat(display);
-      const previous = parseFloat(prevValue);
-
-      if (operator === '+') setDisplay(String(previous + current));
-      if (operator === '-') setDisplay(String(previous - current));
-      if (operator === 'x') setDisplay(String(previous * current));
-      if (operator === '/') setDisplay(String(previous / current));
-
-      setPrevValue(null);
-      setOperator(null);
-    }
-  };
+  const renderPost = ({ item }) => (
+    <View style={styles.post}>
+      <View style={styles.postHeader}>
+        <View style={styles.avatarMini} />
+        <Text style={styles.username}>{item.user}</Text>
+      </View>
+      <Image source={{ uri: item.image }} style={styles.postImage} />
+      <View style={styles.postActions}>
+        <TouchableOpacity><Text style={styles.actionIcon}>❤️</Text></TouchableOpacity>
+        <TouchableOpacity><Text style={styles.actionIcon}>💬</Text></TouchableOpacity>
+        <TouchableOpacity><Text style={styles.actionIcon}>✈️</Text></TouchableOpacity>
+      </View>
+      <Text style={styles.likesText}>{item.likes} Me gusta</Text>
+      <Text style={styles.caption}><Text style={styles.username}>{item.user}</Text> {item.caption}</Text>
+    </View>
+  );
 
   return (
-    <View style={styles.container}>
-      <View style={styles.displayContainer}>
-        <Text style={styles.displayText}>{display}</Text>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.logo}>Instagram Clone</Text>
+        <Text style={styles.headerIcon}>➕ ❤️ 💬</Text>
       </View>
-
-      <View style={styles.buttonsContainer}>
-        <View style={styles.row}>
-          <Button text="C" theme="secondary" onPress={() => handleTap('clear')} />
-          <Button text="+/-" theme="secondary" onPress={() => handleTap('posneg')} />
-          <Button text="%" theme="secondary" onPress={() => handleTap('percentage')} />
-          <Button text="/" theme="accent" onPress={() => handleTap('operator', '/')} />
-        </View>
-        <View style={styles.row}>
-          <Button text="7" onPress={() => handleTap('number', 7)} />
-          <Button text="8" onPress={() => handleTap('number', 8)} />
-          <Button text="9" onPress={() => handleTap('number', 9)} />
-          <Button text="x" theme="accent" onPress={() => handleTap('operator', 'x')} />
-        </View>
-        <View style={styles.row}>
-          <Button text="4" onPress={() => handleTap('number', 4)} />
-          <Button text="5" onPress={() => handleTap('number', 5)} />
-          <Button text="6" onPress={() => handleTap('number', 6)} />
-          <Button text="-" theme="accent" onPress={() => handleTap('operator', '-')} />
-        </View>
-        <View style={styles.row}>
-          <Button text="1" onPress={() => handleTap('number', 1)} />
-          <Button text="2" onPress={() => handleTap('number', 2)} />
-          <Button text="3" onPress={() => handleTap('number', 3)} />
-          <Button text="+" theme="accent" onPress={() => handleTap('operator', '+')} />
-        </View>
-        <View style={styles.row}>
-          <Button text="0" size="double" onPress={() => handleTap('number', 0)} />
-          <Button text="." onPress={() => handleTap('number', '.')} />
-          <Button text="=" theme="accent" onPress={() => handleTap('equal')} />
-        </View>
-      </View>
-    </View>
+      
+      <FlatList
+        data={DATA}
+        renderItem={renderPost}
+        keyExtractor={item => item.id}
+        ListHeaderComponent={() => (
+          <FlatList
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            data={STORY_DATA}
+            renderItem={({ item }) => (
+              <View style={styles.storyContainer}>
+                <View style={styles.storyCircle} />
+                <Text style={styles.storyText}>{item}</Text>
+              </View>
+            )}
+            style={styles.storiesHeader}
+          />
+        )}
+      />
+    </SafeAreaView>
   );
 }
 
-const Button = ({ onPress, text, theme, size }) => {
-  const buttonStyles = [styles.button];
-  const textStyles = [styles.buttonText];
-
-  if (theme === 'secondary') {
-    buttonStyles.push(styles.buttonSecondary);
-    textStyles.push(styles.buttonTextSecondary);
-  } else if (theme === 'accent') {
-    buttonStyles.push(styles.buttonAccent);
-  }
-
-  if (size === 'double') {
-    buttonStyles.push(styles.buttonDouble);
-  }
-
-  return (
-    <TouchableOpacity onPress={onPress} style={buttonStyles}>
-      <Text style={textStyles}>{text}</Text>
-    </TouchableOpacity>
-  );
-};
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000', justifyContent: 'flex-end' },
-  displayContainer: { padding: 20, alignItems: 'flex-end' },
-  displayText: { color: '#fff', fontSize: 80, fontWeight: '300' },
-  buttonsContainer: { paddingBottom: 20 },
-  row: { flexDirection: 'row', justifyContent: 'space-between' },
-  button: {
-    backgroundColor: '#333',
-    flex: 1,
-    height: BUTTON_WIDTH - 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: BUTTON_WIDTH,
-    margin: 5,
-  },
-  buttonDouble: { flex: 0, width: BUTTON_WIDTH * 2 - 10, alignItems: 'flex-start', paddingLeft: 40 },
-  buttonSecondary: { backgroundColor: '#a6a6a6' },
-  buttonAccent: { backgroundColor: '#f09a36' },
-  buttonText: { color: '#fff', fontSize: 30 },
-  buttonTextSecondary: { color: '#000' },
+  container: { flex: 1, backgroundColor: '#fff' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', padding: 15, alignItems: 'center', borderBottomWidth: 0.5, borderBottomColor: '#dbdbdb' },
+  logo: { fontSize: 24, fontWeight: 'bold', fontFamily: 'serif' },
+  headerIcon: { fontSize: 20 },
+  storiesHeader: { paddingVertical: 10, borderBottomWidth: 0.5, borderBottomColor: '#dbdbdb' },
+  storyContainer: { alignItems: 'center', marginHorizontal: 10 },
+  storyCircle: { width: 65, height: 65, borderRadius: 33, backgroundColor: '#f09433', borderWidth: 3, borderColor: '#fff' },
+  storyText: { fontSize: 12, marginTop: 5 },
+  post: { marginBottom: 15 },
+  postHeader: { flexDirection: 'row', alignItems: 'center', padding: 10 },
+  avatarMini: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#dbdbdb', marginRight: 10 },
+  username: { fontWeight: 'bold' },
+  postImage: { width: '100%', height: 400 },
+  postActions: { flexDirection: 'row', padding: 10 },
+  actionIcon: { fontSize: 24, marginRight: 15 },
+  likesText: { fontWeight: 'bold', marginLeft: 10 },
+  caption: { marginLeft: 10, marginTop: 5 },
 });

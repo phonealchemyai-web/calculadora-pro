@@ -1,26 +1,12 @@
 {
   "expo": {
-    "name": "Calculadora",
-    "slug": "calculadora-pro",
+    "name": "Instagram Clone",
+    "slug": "insta-clone",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
-    "splash": {
-      "resizeMode": "contain",
-      "backgroundColor": "#000000"
-    },
     "android": {
-      "package": "com.tunombre.calculadora",
-      "adaptiveIcon": {
-        "backgroundColor": "#000000"
-      }
-    },
-    "extra": {
-      "eas": {
-        "projectId": "346fd3c5-eb37-488d-9bb1-0437a124c772"
-      }
-    },
-    "owner": "phonealchemyai2026"
+      "package": "com.tunombre.instaclone"
+    }
   }
 }
