@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, Image, FlatList, TouchableOpacity, SafeAreaView, Modal, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, Image, FlatList, TouchableOpacity, SafeAreaView, Modal, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { Camera } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 
-// Importaciones de Firebase
+// Firebase
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
-// Tus credenciales reales de la captura 8302.jpg
 const firebaseConfig = {
   apiKey: "AIzaSyDXkH65rdHX-OV506KOOwzmStow9daIyM",
   authDomain: "instagram-clone-d2647.firebaseapp.com",
@@ -23,101 +22,122 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 
 export default function App() {
-  const [hasPermission, setHasPermission] = useState(null);
-  const [cameraVisible, setCameraVisible] = useState(false);
   const [posts, setPosts] = useState([]);
+  const [commentModal, setCommentModal] = useState({ visible: false, postId: null });
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [cameraVisible, setCameraVisible] = useState(false);
   const cameraRef = useRef(null);
 
-  // Escuchar cambios en la base de datos en tiempo real
   useEffect(() => {
     const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const postsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setPosts(postsData);
+    return onSnapshot(q, (snapshot) => {
+      setPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
-
-    (async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      const galleryStatus = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      setHasPermission(status === 'granted' && galleryStatus.status === 'granted');
-    })();
-
-    return () => unsubscribe();
   }, []);
+
+  // Escuchar comentarios del post seleccionado
+  useEffect(() => {
+    if (commentModal.postId) {
+      const q = query(collection(db, 'posts', commentModal.postId, 'comments'), orderBy('createdAt', 'asc'));
+      return onSnapshot(q, (snapshot) => {
+        setComments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      });
+    }
+  }, [commentModal.postId]);
+
+  const sendComment = async () => {
+    if (newComment.trim() === '') return;
+    await addDoc(collection(db, 'posts', commentModal.postId, 'comments'), {
+      text: newComment,
+      user: 'Usuario_Anonimo',
+      createdAt: serverTimestamp()
+    });
+    setNewComment('');
+  };
 
   const uploadToFirebase = async (uri) => {
     setUploading(true);
-    try {
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      const filename = `photo_${Date.now()}.jpg`;
-      const storageRef = ref(storage, `posts/${filename}`);
-      
-      await uploadBytes(storageRef, blob);
-      const downloadURL = await getDownloadURL(storageRef);
-
-      await addDoc(collection(db, 'posts'), {
-        user: 'Usuario_Pro',
-        image: downloadURL,
-        likes: 0,
-        caption: 'Publicado desde mi App conectada! 🚀',
-        createdAt: new Date().getTime()
-      });
-    } catch (e) {
-      console.error(e);
-      alert("Error al subir la foto");
-    }
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    const storageRef = ref(storage, `posts/photo_${Date.now()}.jpg`);
+    await uploadBytes(storageRef, blob);
+    const url = await getDownloadURL(storageRef);
+    await addDoc(collection(db, 'posts'), {
+      user: 'Phone_Dev',
+      image: url,
+      caption: 'Publicado con comentarios! 💬',
+      createdAt: serverTimestamp()
+    });
     setUploading(false);
   };
-
-  const pickImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.5,
-    });
-    if (!result.canceled) await uploadToFirebase(result.assets[0].uri);
-  };
-
-  const takePicture = async () => {
-    if (cameraRef.current) {
-      const photo = await cameraRef.current.takePictureAsync({ quality: 0.5 });
-      setCameraVisible(false);
-      await uploadToFirebase(photo.uri);
-    }
-  };
-
-  if (hasPermission === null) return <View style={styles.centered}><ActivityIndicator/></View>;
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.logo}>InstaCloud</Text>
-        <View style={styles.headerIcons}>
-          <TouchableOpacity onPress={pickImage} style={{marginRight: 15}}><Text style={styles.iconText}>🖼️</Text></TouchableOpacity>
-          <TouchableOpacity onPress={() => setCameraVisible(true)}><Text style={styles.iconText}>📷</Text></TouchableOpacity>
-        </View>
+        <Text style={styles.logo}>InstaCloud 2.0</Text>
+        <TouchableOpacity onPress={() => setCameraVisible(true)}><Text style={styles.iconText}>📷</Text></TouchableOpacity>
       </View>
-
-      {uploading && <ActivityIndicator size="large" color="#0000ff" />}
 
       <FlatList
         data={posts}
         keyExtractor={item => item.id}
         renderItem={({ item }) => (
           <View style={styles.post}>
-            <View style={styles.postHeader}><View style={styles.avatar} /><Text style={styles.username}>{item.user}</Text></View>
+            <View style={styles.postHeader}><Text style={styles.username}>{item.user}</Text></View>
             <Image source={{ uri: item.image }} style={styles.postImage} />
-            <Text style={styles.caption}><Text style={styles.username}>{item.user}</Text> {item.caption}</Text>
+            <View style={styles.actions}>
+              <TouchableOpacity onPress={() => setCommentModal({ visible: true, postId: item.id })}>
+                <Text style={styles.iconText}>💬</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.caption}>{item.caption}</Text>
           </View>
         )}
       />
 
-      <Modal visible={cameraVisible} animationType="slide">
-        <Camera style={styles.camera} ref={cameraRef}>
-          <TouchableOpacity style={styles.captureBtn} onPress={takePicture}><View style={styles.innerCircle} /></TouchableOpacity>
+      {/* Modal de Comentarios */}
+      <Modal visible={commentModal.visible} animationType="slide">
+        <SafeAreaView style={{flex: 1}}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setCommentModal({ visible: false, postId: null })}><Text>Cerrar</Text></TouchableOpacity>
+            <Text style={{fontWeight: 'bold'}}>Comentarios</Text>
+            <View width={50}/>
+          </View>
+          <FlatList
+            data={comments}
+            keyExtractor={item => item.id}
+            renderItem={({ item }) => (
+              <View style={styles.commentItem}>
+                <Text style={{fontWeight: 'bold'}}>{item.user}: </Text>
+                <Text>{item.text}</Text>
+              </View>
+            )}
+            style={{padding: 20}}
+          />
+          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>
+            <View style={styles.inputArea}>
+              <TextInput 
+                style={styles.input} 
+                placeholder="Escribe un comentario..." 
+                value={newComment}
+                onChangeText={setNewComment}
+              />
+              <TouchableOpacity onPress={sendComment}><Text style={{color: '#0095f6', fontWeight: 'bold'}}>Publicar</Text></TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Modal Cámara */}
+      <Modal visible={cameraVisible}>
+        <Camera style={{flex: 1, justifyContent: 'flex-end', alignItems: 'center'}} ref={cameraRef}>
+          <TouchableOpacity style={styles.captureBtn} onPress={async () => {
+            const p = await cameraRef.current.takePictureAsync();
+            setCameraVisible(false);
+            uploadToFirebase(p.uri);
+          }}><View style={styles.innerCircle}/></TouchableOpacity>
         </Camera>
       </Modal>
     </SafeAreaView>
@@ -126,18 +146,19 @@ export default function App() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', padding: 15, alignItems: 'center', borderBottomWidth: 0.5, borderBottomColor: '#dbdbdb' },
-  headerIcons: { flexDirection: 'row' },
-  iconText: { fontSize: 26 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', padding: 15, borderBottomWidth: 0.5, borderBottomColor: '#dbdbdb' },
   logo: { fontSize: 24, fontWeight: 'bold' },
+  iconText: { fontSize: 24, paddingHorizontal: 10 },
   post: { marginBottom: 20 },
-  postHeader: { flexDirection: 'row', padding: 10, alignItems: 'center' },
-  avatar: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#eee', marginRight: 10 },
+  postHeader: { padding: 10 },
   username: { fontWeight: 'bold' },
   postImage: { width: '100%', height: 400 },
-  caption: { padding: 10 },
-  camera: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', paddingBottom: 50 },
-  captureBtn: { width: 70, height: 70, borderRadius: 35, backgroundColor: 'white', justifyContent: 'center', alignItems: 'center' },
-  innerCircle: { width: 60, height: 60, borderRadius: 30, borderWidth: 2, borderColor: 'black' }
+  actions: { flexDirection: 'row', padding: 10 },
+  caption: { paddingHorizontal: 10 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', padding: 15, borderBottomWidth: 0.5 },
+  commentItem: { flexDirection: 'row', marginBottom: 10 },
+  inputArea: { flexDirection: 'row', padding: 15, borderTopWidth: 0.5, alignItems: 'center' },
+  input: { flex: 1, backgroundColor: '#f0f0f0', borderRadius: 20, paddingHorizontal: 15, paddingVertical: 8, marginRight: 10 },
+  captureBtn: { width: 70, height: 70, borderRadius: 35, backgroundColor: 'white', marginBottom: 40, justifyContent: 'center', alignItems: 'center' },
+  innerCircle: { width: 60, height: 60, borderRadius: 30, borderWeight: 2, borderColor: 'black' }
 });
