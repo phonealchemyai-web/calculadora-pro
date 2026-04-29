@@ -7,6 +7,11 @@
     "icon": "./assets/icon.png",
     "android": {
       "package": "com.tunombre.instaclone"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "2fcc115b-bb0c-4932-8cfe-1e6d3449bbb7"
+      }
     }
   }
 }
