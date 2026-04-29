@@ -1,33 +1,26 @@
 {
   "expo": {
-    "name": "MiPrimeraApp",
-    "slug": "MiPrimeraApp",
+    "name": "Calculadora",
+    "slug": "calculadora-pro",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
-    "ios": {
-      "supportsTablet": true
+      "backgroundColor": "#000000"
     },
     "android": {
+      "package": "com.tunombre.calculadora",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "package": "com.phonealchemyai.miprimeraapp"
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
+        "backgroundColor": "#000000"
+      }
     },
     "extra": {
       "eas": {
-        "projectId": "76cec144-f9e5-42a8-a224-981bb95d56b4"
+        "projectId": "346fd3c5-eb37-488d-9bb1-0437a124c772"
       }
-    }
+    },
+    "owner": "phonealchemyai2026"
   }
 }
